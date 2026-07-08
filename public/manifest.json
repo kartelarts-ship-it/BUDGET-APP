@@ -1,5 +1,5 @@
 {
-  "name": "KaCorp Budget",
+  "name": "KaCorp Budget V3",
   "short_name": "KaCorp",
   "description": "Maîtrisez vos finances. Visualisez vos dépenses. Avancez avec clarté.",
   "start_url": "/",
@@ -9,8 +9,7 @@
   "background_color": "#080E0A",
   "theme_color": "#080E0A",
   "lang": "fr-FR",
-  "dir": "ltr",
-  "categories": ["finance", "productivity", "utilities"],
+  "categories": ["finance", "productivity"],
   "prefer_related_applications": false,
   "icons": [
     { "src": "/icons/icon-72.png",  "sizes": "72x72",   "type": "image/png", "purpose": "any" },
@@ -25,8 +24,6 @@
   "shortcuts": [
     {
       "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Voir le tableau de bord",
       "url": "/",
       "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
     }

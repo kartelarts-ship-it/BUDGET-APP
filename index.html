@@ -2,45 +2,32 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-
-    <!-- Viewport strict mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-
-    <!-- SEO & description -->
-    <title>KaCorp Budget</title>
+    <title>KaCorp Budget V3</title>
     <meta name="description" content="Maîtrisez vos finances. Visualisez vos dépenses. Avancez avec clarté." />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#080E0A" />
 
-    <!-- iOS PWA -->
+    <!-- iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="KaCorp Budget" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
-    <link rel="apple-touch-startup-image" href="/icons/icon-512.png" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72.png" />
+    <link rel="icon" type="image/png" href="/icons/icon-96.png" />
 
-    <!-- Fonts Inter -->
+    <!-- Inter font -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <style>
-      /* ── Reset & base ── */
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-      html {
-        height: 100%;
-        -webkit-text-size-adjust: 100%;
-        text-size-adjust: 100%;
-      }
-
+      html { height: 100%; -webkit-text-size-adjust: 100%; }
       body {
         height: 100%;
         background: #080E0A;
@@ -49,38 +36,22 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         overscroll-behavior: none;
-        /* Safe area pour iPhone avec encoche */
         padding-top: env(safe-area-inset-top);
-        padding-left: env(safe-area-inset-left);
-        padding-right: env(safe-area-inset-right);
       }
-
-      #root {
-        height: 100%;
-        min-height: 100dvh;
-      }
-
-      /* ── Inputs ── */
+      #root { height: 100%; min-height: 100dvh; }
       input[type=number]::-webkit-inner-spin-button,
       input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
       input[type=number] { -moz-appearance: textfield; }
       input, button, textarea, select { font-family: inherit; }
-
-      /* ── Scrollbar invisible ── */
       ::-webkit-scrollbar { width: 0; height: 0; }
       * { scrollbar-width: none; }
-
-      /* ── Prevent iOS callout on long press ── */
+      ::selection { background: #D8B56D30; }
       img { -webkit-touch-callout: none; user-select: none; }
-
-      /* ── Selection color ── */
-      ::selection { background: #D8B56D40; }
     </style>
   </head>
   <body>
     <div id="root"></div>
 
-    <!-- Service Worker registration -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -88,7 +59,6 @@
             .register('/service-worker.js', { scope: '/' })
             .then(reg => {
               console.log('[KACORP SW] Enregistré ✓', reg.scope);
-              // Vérifie les mises à jour toutes les 60s
               setInterval(() => reg.update(), 60000);
             })
             .catch(err => console.warn('[KACORP SW] Erreur:', err));
@@ -96,7 +66,6 @@
       }
     </script>
 
-    <!-- Vite entry point -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
