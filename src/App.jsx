@@ -68,7 +68,6 @@ const abs = Math.abs(n || 0);
 const str = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(abs);
 return `${str} ${sym}`;
 };
-const fmtSigned = (n, cur) => (n >= 0 ? "+" : "−") + fmt(n, cur);
 const fmtPct = (n) => `${Math.round(Math.max(0, n || 0))}%`;
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 
@@ -196,25 +195,32 @@ style={{ transition:"opacity 0.2s" }}>
 
 // ─── SVG BAR CHART (évolution épargne) ──────────────────────────
 function BarChart({ data, color = C.pos, h = 120 }) {
-if (!data.length) return <div style={{ height:h, display:"flex", alignItems:"center",
-justifyContent:"center" }}><span style={{ color:C.label, fontSize:12 }}>Pas encore de données</span></div>;
+if (!data.length) return (
+<div style={{ height:h, display:"flex", alignItems:"center", justifyContent:"center" }}>
+<span style={{ color:C.label, fontSize:12 }}>Pas encore de données</span>
+</div>
+);
 const vals = data.map(d => d.value);
-const maxV = Math.max(...vals, 1);
-const barW = Math.min(28, Math.floor((320 - data.length * 4) / data.length));
+const maxAbs = Math.max(...vals.map(v => Math.abs(v)), 1);
+const barW = Math.min(28, Math.max(8, Math.floor((320 - data.length * 4) / data.length)));
+const midY = h / 2; // ligne zéro au centre
 
 return (
 <svg viewBox={`0 0 ${Math.max(data.length * (barW + 8), 100)} ${h + 28}`}
 style={{ width:"100%", height:h + 28, overflow:"visible" }}>
+{/* Ligne zéro */}
+<line x1={0} y1={midY} x2={data.length * (barW + 8)} y2={midY}
+stroke={C.border} strokeWidth={1} strokeDasharray="3 3"/>
 {data.map((d, i) => {
-const bh = Math.max((d.value / maxV) * h, 2);
+const absH = Math.max((Math.abs(d.value) / maxAbs) * (h / 2), 2);
 const x = i * (barW + 8);
-const y = h - bh;
-const col = d.value < 0 ? C.neg : color;
+const isNeg = d.value < 0;
+const y = isNeg ? midY : midY - absH;
+const col = isNeg ? C.neg : color;
 return (
 <g key={i}>
-<rect x={x} y={y} width={barW} height={bh} rx={4} fill={col} opacity={0.85}
-style={{ transition:"height 0.5s cubic-bezier(.4,0,.2,1)" }}/>
-<text x={x + barW/2} y={h + 18} textAnchor="middle"
+<rect x={x} y={y} width={barW} height={absH} rx={3} fill={col} opacity={0.85}/>
+<text x={x + barW / 2} y={h + 18} textAnchor="middle"
 fill={C.label} fontSize={9} fontFamily="Inter,sans-serif">{d.label}</text>
 </g>
 );
@@ -271,15 +277,15 @@ const NAV = [
 // APP ROOT
 // ═══════════════════════════════════════════════════════════════
 export default function KaCorpBudget() {
-const raw = load();
 const [state, setState] = useState(() => {
+const raw = load();
 const base = { ...DEFAULT_STATE };
 if (raw) {
 base.income = raw.income ?? "";
-base.categories = raw.categories ?? DEFAULT_CATS;
+base.categories = Array.isArray(raw.categories) && raw.categories.length > 0 ? raw.categories : DEFAULT_CATS;
 base.expenses = raw.expenses ?? {};
-base.goals = raw.goals ?? [];
-base.history = raw.history ?? [];
+base.goals = Array.isArray(raw.goals) ? raw.goals : [];
+base.history = Array.isArray(raw.history) ? raw.history : [];
 base.settings = { ...DEFAULT_STATE.settings, ...(raw.settings ?? {}) };
 base.started = raw.started ?? false;
 }
@@ -368,7 +374,7 @@ Bonjour, {state.settings.name} 👋
 totalExp={totalExp} balance={balance} saveRate={saveRate} isOver={isOver}
 cur={cur} sym={sym} fmt={(n) => fmt(n, cur)} />}
 {tab === "depenses" && <Depenses state={state} set={set} inc={inc}
-totalExp={totalExp} cur={cur} fmt={(n) => fmt(n, cur)} showToast={showToast} />}
+totalExp={totalExp} balance={balance} cur={cur} fmt={(n) => fmt(n, cur)} showToast={showToast} />}
 {tab === "objectifs" && <Objectifs state={state} set={set} cur={cur}
 fmt={(n) => fmt(n, cur)} showToast={showToast} />}
 {tab === "stats" && <Stats state={state} inc={inc} totalExp={totalExp}
@@ -412,15 +418,20 @@ animation:"toastIn 0.3s ease" }}>
 )}
 
 <style>{`
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
 input[type=number] { -moz-appearance:textfield; }
-::-webkit-scrollbar { width:0; }
+::-webkit-scrollbar { width:0; height:0; }
 input, button, textarea, select { font-family:inherit; }
-@keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(-8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
-@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-.screen { animation: fadeUp 0.28s cubic-bezier(.4,0,.2,1) both; }
+@keyframes toastIn {
+from { opacity:0; transform:translateX(-50%) translateY(-8px); }
+to { opacity:1; transform:translateX(-50%) translateY(0); }
+}
+@keyframes fadeUp {
+from { opacity:0; transform:translateY(12px); }
+to { opacity:1; transform:translateY(0); }
+}
+.screen { animation: fadeUp 0.25s ease both; }
 `}</style>
 </div>
 );
@@ -558,7 +569,7 @@ fontVariantNumeric:"tabular-nums" }}>{fmt(cat.val)}</span>
 // ═══════════════════════════════════════════════════════════════
 // DÉPENSES
 // ═══════════════════════════════════════════════════════════════
-function Depenses({ state, set, inc, totalExp, fmt, showToast }) {
+function Depenses({ state, set, inc, totalExp, balance, fmt, showToast }) {
 const [editId, setEditId] = useState(null);
 const [showAdd, setShowAdd] = useState(false);
 const [newCat, setNewCat] = useState({ label:"", icon:"📦", color:COLORS[0] });
