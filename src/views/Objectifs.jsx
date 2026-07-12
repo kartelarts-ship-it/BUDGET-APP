@@ -1,4 +1,4 @@
-// ─── KACORP BUDGET V5 · views/Objectifs.jsx ─────────────────────
+// KACORP BUDGET V5 - views/Objectifs.jsx
 
 import { useState, useCallback } from "react";
 import { C } from "../constants.js";
@@ -6,47 +6,78 @@ import { Card, GoldBtn } from "../components/UI.jsx";
 import { GoalForm, GoalEditWrapper } from "../components/GoalForm.jsx";
 import { GoalCard } from "../components/GoalCard.jsx";
 import { EMPTY_GOAL } from "../constants.js";
-import {
-  parseAmt, uid, syncCurrent, computeCapacity,
-} from "../utils/finance.js";
+import { parseAmt, uid, syncCurrent, computeCapacity } from "../utils/finance.js";
 
 export function Objectifs({ state, set, inc, f, showToast }) {
   const [showAdd, setShowAdd] = useState(false);
   const [editId,  setEditId]  = useState(null);
   const [ng,      setNg]      = useState(EMPTY_GOAL);
 
-  const { capaciteEpargne } = computeCapacity(
-    inc,
-    state.categories.reduce((s, c) => s + parseAmt(state.expenses[c.id] || 0), 0),
-    state.settings
+  const totalExp = state.categories.reduce(
+    (s, c) => s + parseAmt(state.expenses[c.id] || 0), 0
   );
+  const { capaciteEpargne } = computeCapacity(inc, totalExp, state.settings);
 
-  // Ajouter
   const addGoal = useCallback(() => {
     if (!ng.name.trim()) { showToast("Nom requis", "err"); return; }
     if (!ng.target || parseAmt(ng.target) <= 0) { showToast("Montant cible requis", "err"); return; }
-    const base = { id: uid(), ...ng, current: ng.current || "0", contributions: [] };
-    const synced = syncCurrent(base);
-    set({ goals: [...state.goals, synced] });
+   const initialAmount = Math.min(
+  parseAmt(ng.current),
+  parseAmt(ng.target)
+);
+
+const now = new Date();
+const localDate =
+  now.getFullYear() +
+  "-" +
+  String(now.getMonth() + 1).padStart(2, "0") +
+  "-" +
+  String(now.getDate()).padStart(2, "0");
+
+const contributions =
+  initialAmount > 0
+    ? [
+        {
+          id: uid(),
+          amount: String(initialAmount),
+          date: localDate,
+          note: "Solde initial",
+          type: "initialBalance",
+        },
+      ]
+    : [];
+
+const base = {
+  id: uid(),
+  ...ng,
+  current: String(initialAmount),
+  contributions,
+};
+
+const synced = syncCurrent(base);
+
+set({
+  goals: [...state.goals, synced],
+});
     setNg(EMPTY_GOAL());
     setShowAdd(false);
     showToast("Objectif créé ✓");
   }, [ng, state.goals, set, showToast]);
 
-  // Mettre à jour
-  const updateGoal = useCallback((id, patch) => {
-    const updated = state.goals.map(g => g.id === id ? { ...g, ...patch } : g);
-    set({ goals: updated });
-  }, [state.goals, set]);
-
-  // Sauvegarder depuis GoalCard (reçoit l'objet entier)
   const saveGoal = useCallback((updatedGoal) => {
     const goals = state.goals.map(g => g.id === updatedGoal.id ? updatedGoal : g);
     set({ goals });
   }, [state.goals, set]);
 
-  // Supprimer
+  const saveEditedGoal = useCallback((id, patch) => {
+    const goals = state.goals.map(g => g.id === id ? { ...g, ...patch } : g);
+    set({ goals });
+    setEditId(null);
+    showToast("Objectif mis à jour ✓");
+  }, [state.goals, set, showToast]);
+
   const deleteGoal = useCallback((id) => {
+    if (!window.confirm("Supprimer cet objectif ?")) return;
     set({ goals: state.goals.filter(g => g.id !== id) });
     showToast("Objectif supprimé", "warn");
   }, [state.goals, set, showToast]);
@@ -109,33 +140,20 @@ export function Objectifs({ state, set, inc, f, showToast }) {
             goal={goal}
             capaciteEpargne={capaciteEpargne}
             inc={inc}
-            onSave={(patch) => {
-              updateGoal(goal.id, patch);
-              setEditId(null);
-              showToast("Objectif mis à jour ✓");
-            }}
+            onSave={(patch) => saveEditedGoal(goal.id, patch)}
             onCancel={() => setEditId(null)}
           />
         );
         return (
-          <div key={goal.id}>
-            <GoalCard
-              goal={goal}
-              f={f}
-              onUpdate={saveGoal}
-              onDelete={() => deleteGoal(goal.id)}
-              capaciteEpargne={capaciteEpargne}
-              inc={inc}
-            />
-            {/* Bouton éditer sous la carte */}
-            <button onClick={() => setEditId(goal.id)}
-              style={{ marginTop:4, width:"100%", padding:"8px",
-                background:"transparent", border:`1px solid ${C.border}`,
-                borderRadius:10, color:C.label, fontSize:11, fontWeight:600,
-                cursor:"pointer", fontFamily:"inherit" }}>
-              ✏️ Modifier cet objectif
-            </button>
-          </div>
+          <GoalCard
+            key={goal.id}
+            goal={goal}
+            f={f}
+            onUpdate={saveGoal}
+            onDelete={() => deleteGoal(goal.id)}
+            onEdit={() => setEditId(goal.id)}
+            capaciteEpargne={capaciteEpargne}
+          />
         );
       })}
 
@@ -143,7 +161,7 @@ export function Objectifs({ state, set, inc, f, showToast }) {
       {!showAdd && (
         <button onClick={() => setShowAdd(true)}
           style={{ padding:"14px", borderRadius:16,
-            border:`1px dashed ${C.muted}`, background:"transparent",
+            border:"1px dashed " + C.muted, background:"transparent",
             color:C.label, fontSize:14, fontWeight:600,
             cursor:"pointer", fontFamily:"inherit", width:"100%" }}>
           + Nouvel objectif financier
